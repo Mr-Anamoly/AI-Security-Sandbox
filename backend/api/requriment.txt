@@ -1,0 +1,10 @@
+make a virtual envirement to test using
+python -m venv .venv
+
+
+active virtal envirement
+.\.venv\Scripts\Activate.ps1
+
+
+make sure right file
+pip install openai anthropic google-genai            ###########important

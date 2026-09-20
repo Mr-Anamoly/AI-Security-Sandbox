@@ -1,0 +1,47 @@
+# Virtual Environments
+
+.venv/
+venv/
+env/
+
+# Python Cache Files
+
+**pycache**/
+*.py[cod]
+*$py.class
+
+# Environment Variables & API Keys
+
+.env
+.env.*
+!.env.example
+
+# Python Build & Distribution
+
+build/
+dist/
+*.egg-info/
+
+# Testing & Coverage
+
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter Notebook
+
+.ipynb_checkpoints/
+
+# VS Code
+
+.vscode/
+
+# Operating System Files
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+
+*.log

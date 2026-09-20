@@ -1,7 +1,6 @@
 from google import genai
 from google.genai import types
 
-
 def get_reply(api_key, model, messages):
 
     client = genai.Client(api_key=api_key)

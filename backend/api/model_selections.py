@@ -7,7 +7,7 @@ PROVIDERS = {
 MODELS = {
     "OpenAI": ["gpt-4.1", "gpt-4.1-mini"],
     "Anthropic": ["claude-sonnet-4-5"],
-    "Gemini": ["gemini-2.5-flash"]
+    "Gemini": ["gemini-2.5-flash", "gemini-3.6-flash"]
 }
 
 

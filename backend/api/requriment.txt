@@ -8,6 +8,3 @@ active virtal envirement
 
 make sure right file
 pip install openai anthropic google-genai            ###########important
-
-
-test api test- 

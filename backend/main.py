@@ -1,83 +1,52 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
-from sqlalchemy.orm import Session
+from typing import List, Dict, Any
+from backend.models.model_config import ModelConfig
+from backend.models.model_manager import ModelManager
+from backend.runner.executor import BenchmarkExecutor
+from backend.database.repositories.database import get_run_results
 
-from backend.database.database import get_db, init_db
-from backend.database.models.schema import BenchmarkRun, TestResult
-from backend.runner.executor import run_benchmark
+app = FastAPI(title="AI Security Sandbox API")
 
-app = FastAPI(title="AI Security Sandbox API", version="1.0.0")
+manager = ModelManager()
+executor = BenchmarkExecutor(manager)
 
-@app.on_event("startup")
-def startup_event():
-    init_db()
-
-class TestCase(BaseModel):
-    test_id: str
-    name: Optional[str] = ""
-    category: Optional[str] = ""
-    prompt: str
-    expected_behavior: Optional[str] = ""
-
-class RunRequest(BaseModel):
-    provider: str
-    model_name: str
-    test_cases: List[TestCase]
-    mock: Optional[bool] = True
+class RunBenchmarkRequest(BaseModel):
+    alias: str
+    test_cases: List[Dict[str, Any]]
 
 @app.get("/")
-def health_check():
-    return {"status": "online", "system": "AI Security Sandbox API"}
+def read_root():
+    return {"status": "online", "system": "AI-Security-Sandbox API"}
 
-@app.post("/api/benchmark/run")
-def start_benchmark(payload: RunRequest):
-    tests = [tc.dict() for tc in payload.test_cases]
-    result = run_benchmark(
-        provider=payload.provider,
-        model_name=payload.model_name,
-        test_cases=tests,
-        mock=payload.mock
-    )
-    return result
+@app.post("/models/register")
+def register_model(alias: str, config: ModelConfig):
+    manager.register_model(alias, config)
+    return {"message": f"Model '{alias}' registered successfully."}
 
-@app.get("/api/benchmark/runs")
-def list_runs(db: Session = Depends(get_db)):
-    runs = db.query(BenchmarkRun).order_by(BenchmarkRun.id.desc()).all()
+@app.post("/benchmark/run")
+async def run_benchmark(request: RunBenchmarkRequest):
+    try:
+        summary = await executor.run_suite(request.alias, request.test_cases)
+        return summary
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/benchmark/results/{run_id}")
+def get_results(run_id: int):
+    results = get_run_results(run_id)
+    if not results:
+        raise HTTPException(status_code=404, detail="Run ID not found or has no results.")
     return [
         {
             "id": r.id,
-            "provider": r.provider,
-            "model_name": r.model_name,
-            "created_at": r.created_at,
-            "total_results": len(r.results)
+            "test_id": r.test_id,
+            "category": r.category,
+            "prompt": r.prompt,
+            "response_text": r.response_text,
+            "is_jailbroken": r.is_jailbroken,
+            "risk_score": r.risk_score,
+            "executed_at": r.executed_at
         }
-        for r in runs
+        for r in results
     ]
-
-@app.get("/api/benchmark/runs/{run_id}")
-def get_run_details(run_id: int, db: Session = Depends(get_db)):
-    run = db.query(BenchmarkRun).filter(BenchmarkRun.id == run_id).first()
-    if not run:
-        raise HTTPException(status_code=404, detail="Run ID not found")
-    
-    return {
-        "id": run.id,
-        "provider": run.provider,
-        "model_name": run.model_name,
-        "created_at": run.created_at,
-        "results": [
-            {
-                "id": res.id,
-                "test_id": res.test_id,
-                "test_name": res.test_name,
-                "category": res.category,
-                "prompt": res.prompt,
-                "response_text": res.response_text,
-                "is_jailbroken": res.is_jailbroken,
-                "risk_score": res.risk_score,
-                "executed_at": res.executed_at
-            }
-            for res in run.results
-        ]
-    }
